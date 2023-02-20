@@ -1,58 +1,225 @@
+<script>
+import * as THREE from 'three';
+import Stats from 'three/examples/jsm/libs/stats.module'
+import {onMounted} from "vue"
+
+export default {
+  setup() {
+    onMounted(() => {
+      const scene = new THREE.Scene()
+
+      const gridHelper = new THREE.GridHelper(10, 10, 0xaec6cf, 0xaec6cf)
+      scene.add(gridHelper)
+
+      const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000)
+
+      const onWindowResize = () => {
+        camera.aspect = window.innerWidth / window.innerHeight
+        camera.updateProjectionMatrix()
+        renderer.setSize(window.innerWidth, window.innerHeight)
+        render()
+      }
+
+      const renderer = new THREE.WebGLRenderer()
+      renderer.setSize(window.innerWidth, window.innerHeight)
+      document.body.appendChild(renderer.domElement)
+
+      const geometry = new THREE.BoxGeometry()
+      const material = new THREE.MeshBasicMaterial({
+        color: 0x00ff00,
+        wireframe: true,
+      })
+
+      const cube = new THREE.Mesh(geometry, material)
+      cube.position.set(0, 0.5, -10)
+      scene.add(cube)
+
+      window.addEventListener('resize', onWindowResize, false)
+
+      /* Liner Interpolation
+     * lerp(min, max, ratio)
+     * eg,
+     * lerp(20, 60, .5)) = 40
+     * lerp(-20, 60, .5)) = 20
+     * lerp(20, 60, .75)) = 50
+     * lerp(-20, -10, .1)) = -.19
+     */
+      const lerp = (x, y, a) => {
+        return (1 - a) * x + a * y
+      }
+
+      // Used to fit the lerps to start and end at specific scrolling percentages
+      const scalePercent = (start, end) => {
+        return (scrollPercent - start) / (end - start)
+      }
+
+      const animationScripts = []
+
+      //add an animation that moves the cube through first 40 percent of scroll
+      animationScripts.push({
+        start: 0,
+        end: 40,
+        func: () => {
+          camera.lookAt(cube.position)
+          camera.position.set(0, 1, 2)
+          cube.position.z = lerp(-10, 0, scalePercent(0, 40))
+          //console.log(cube.position.z)
+        },
+      })
+
+      //add an animation that rotates the cube between 40-60 percent of scroll
+      animationScripts.push({
+        start: 40,
+        end: 60,
+        func: () => {
+          camera.lookAt(cube.position)
+          camera.position.set(0, 1, 2)
+          cube.rotation.z = lerp(0, Math.PI, scalePercent(40, 60))
+          //console.log(cube.rotation.z)
+        },
+      })
+
+      //add an animation that moves the camera between 60-80 percent of scroll
+      animationScripts.push({
+        start: 60,
+        end: 80,
+        func: () => {
+          camera.position.x = lerp(0, 5, scalePercent(60, 80))
+          camera.position.y = lerp(1, 5, scalePercent(60, 80))
+          camera.lookAt(cube.position)
+          //console.log(camera.position.x + " " + camera.position.y)
+        },
+      })
+
+      //add an animation that auto rotates the cube from 80 percent of scroll
+      animationScripts.push({
+        start: 80,
+        end: 101,
+        func: () => {
+          //auto rotate
+          cube.rotation.x += 0.01
+          cube.rotation.y += 0.01
+        },
+      })
+
+      const playScrollAnimations = () => {
+        animationScripts.forEach((a) => {
+          if (scrollPercent >= a.start && scrollPercent < a.end) {
+            a.func()
+          }
+        })
+      }
+
+      let scrollPercent = 0
+
+      document.body.onscroll = () => {
+        //calculate the current scroll progress as a percentage
+        scrollPercent =
+            ((document.documentElement.scrollTop || document.body.scrollTop) /
+                ((document.documentElement.scrollHeight || document.body.scrollHeight) -
+                    document.documentElement.clientHeight)) *
+            100
+        document.getElementById('scrollProgress').innerText =
+            'Scroll Progress : ' + scrollPercent.toFixed(2)
+      }
+
+      const stats = Stats()
+      document.body.appendChild(stats.dom)
+
+      const animate = () => {
+        requestAnimationFrame(animate)
+
+        playScrollAnimations()
+
+        render()
+
+        stats.update()
+      }
+
+      const render = () => {
+        renderer.render(scene, camera)
+      }
+
+      window.scrollTo({top: 0, behavior: 'smooth'})
+      animate()
+    })
+  }
+};
+</script>
+
 <template>
-  <div class="hello">
-    <h1>{{ msg }}</h1>
-    <p>
-      For a guide and recipes on how to configure / customize this project,<br>
-      check out the
-      <a href="https://cli.vuejs.org" target="_blank" rel="noopener">vue-cli documentation</a>.
-    </p>
-    <h3>Installed CLI Plugins</h3>
-    <ul>
-      <li><a href="https://github.com/vuejs/vue-cli/tree/dev/packages/%40vue/cli-plugin-babel" target="_blank" rel="noopener">babel</a></li>
-      <li><a href="https://github.com/vuejs/vue-cli/tree/dev/packages/%40vue/cli-plugin-eslint" target="_blank" rel="noopener">eslint</a></li>
-    </ul>
-    <h3>Essential Links</h3>
-    <ul>
-      <li><a href="https://vuejs.org" target="_blank" rel="noopener">Core Docs</a></li>
-      <li><a href="https://forum.vuejs.org" target="_blank" rel="noopener">Forum</a></li>
-      <li><a href="https://chat.vuejs.org" target="_blank" rel="noopener">Community Chat</a></li>
-      <li><a href="https://twitter.com/vuejs" target="_blank" rel="noopener">Twitter</a></li>
-      <li><a href="https://news.vuejs.org" target="_blank" rel="noopener">News</a></li>
-    </ul>
-    <h3>Ecosystem</h3>
-    <ul>
-      <li><a href="https://router.vuejs.org" target="_blank" rel="noopener">vue-router</a></li>
-      <li><a href="https://vuex.vuejs.org" target="_blank" rel="noopener">vuex</a></li>
-      <li><a href="https://github.com/vuejs/vue-devtools#vue-devtools" target="_blank" rel="noopener">vue-devtools</a></li>
-      <li><a href="https://vue-loader.vuejs.org" target="_blank" rel="noopener">vue-loader</a></li>
-      <li><a href="https://github.com/vuejs/awesome-vue" target="_blank" rel="noopener">awesome-vue</a></li>
-    </ul>
+  <div ref="canvas" class="canvas">
+    <a href="/view_source/animate-on-scroll.html" id="vwSrcLink" target="_blank">&lt;&gt;</a>
+    <span id="scrollProgress"></span>
+    <main>
+      <h1>Costiuc Igor</h1>
+      <section>
+        <h2>BUILDING WEBSTIES WITH PASSION</h2>
+      </section>
+      <section>
+        <h2>TEST1</h2>
+        <p>.........................</p>
+      </section>
+
+      <section>
+        <h2>TEST2</h2>
+        <p>........................</p>
+      </section>
+
+      <section>
+        <h2>TEST3</h2>
+        <p>.........................</p>
+      </section>
+
+      <section>
+        <h2>TEST4</h2>
+        <p>.................................</p>
+      </section>
+    </main>
   </div>
 </template>
 
-<script>
-export default {
-  name: 'HelloWorld',
-  props: {
-    msg: String
-  }
+<style>
+body {
+  overflow-x: hidden;
+  margin: 0px;
+  font-family: monospace;
+  color: white;
 }
-</script>
 
-<!-- Add "scoped" attribute to limit CSS to this component only -->
-<style scoped>
-h3 {
-  margin: 40px 0 0;
+canvas {
+  position: fixed;
+  top: 0;
+  left: 0;
 }
-ul {
-  list-style-type: none;
-  padding: 0;
+
+main {
+  width: 100vw;
+  height: 200vw;
+  z-index: 99;
+  position: absolute;
+  justify-content: center;
+  text-align: center;
+  pointer-events: none;
+  font-size: 5vh;
 }
-li {
-  display: inline-block;
-  margin: 0 10px;
+
+section {
+  min-height: 100vh;
+  padding: 20px;
+  font-size: 4vh;
 }
-a {
-  color: #42b983;
+
+#scrollProgress {
+  position: fixed;
+  bottom: 10px;
+  left: 10px;
+  z-index: 99;
+  font-size: 3vh;
+}
+
+#vwSrcLink {
+  position: fixed;
+  z-index: 99;
 }
 </style>
